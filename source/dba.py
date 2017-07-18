@@ -6,7 +6,7 @@ from cmn_function import raw_file_parser
 class DataBaseAdmin:
     def __init__(self):
         self.db_name = "FX_Historical_Data.db"
-        self.db_path = r"C:\1.PyProject\historicalDataAnalyzer\database"
+        self.db_path = r"C:\1.PyProject\AlgoTrading\database"
         self.db = sqlite3.connect(os.path.join(self.db_path, self.db_name))
         self.cursor = self.db.cursor()
 
@@ -32,8 +32,8 @@ class DataBaseAdmin:
     def get_profit_count_among_year(self, start_time, end_time):
         sqlcmd = "select month, date,  sum(Open) as Open, (max(high) - sum(Open)) * 10000 as high, (min(low) -  sum(Open)) * 10000 as low, " \
                  "(max(high) - min(low)) * 10000 as range from ( select month, date, hour, case hour when %d then Open else 0 end as open, high, low, range from Hourly_Table ) T " \
-                 "where hour between %d and %d group by month, date having ((max(high) - sum(Open)) * 10000 > 35 and (min(low) -  sum(Open)) * 10000 > -25 and sum(Open) > 1) " \
-                 "or ((max(high) - sum(Open)) * 10000 < 25 and (min(low) -  sum(Open)) * 10000 < -35 and sum(Open) > 1)" % (start_time, start_time, end_time)
+                 "where hour between %d and %d group by month, date having ((max(high) - sum(Open)) * 10000 > 40 and (min(low) -  sum(Open)) * 10000 > -28 and sum(Open) > 1) " \
+                 "or ((max(high) - sum(Open)) * 10000 < 28 and (min(low) -  sum(Open)) * 10000 < -40 and sum(Open) > 0)" % (start_time, start_time, end_time)
         self.cursor.execute(sqlcmd)
         result = self.cursor.fetchall()
         return  len(result)
