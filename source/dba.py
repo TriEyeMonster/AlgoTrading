@@ -9,6 +9,7 @@ class DataBaseAdmin:
         self.db_path = r"C:\1.PyProject\AlgoTrading\database"
         self.db = sqlite3.connect(os.path.join(self.db_path, self.db_name))
         self.cursor = self.db.cursor()
+        self.result = []
 
     def update(self, file_list):
         parsed_f_lst = raw_file_parser(file_list)
@@ -29,30 +30,74 @@ class DataBaseAdmin:
         self.cursor.execute(sqlcmd)
         return self.cursor.fetchall()
 
-    def get_profit_count_among_year(self, start_time, end_time):
+    def get_profit_count_among_year(self, start_time, end_time, limit, stop):
         sqlcmd = "select month, date,  sum(Open) as Open, (max(high) - sum(Open)) * 10000 as high, (min(low) -  sum(Open)) * 10000 as low, " \
                  "(max(high) - min(low)) * 10000 as range from ( select month, date, hour, case hour when %d then Open else 0 end as open, high, low, range from Hourly_Table ) T " \
-                 "where hour between %d and %d group by month, date having ((max(high) - sum(Open)) * 10000 > 40 and (min(low) -  sum(Open)) * 10000 > -28 and sum(Open) > 1) " \
-                 "or ((max(high) - sum(Open)) * 10000 < 28 and (min(low) -  sum(Open)) * 10000 < -40 and sum(Open) > 0)" % (start_time, start_time, end_time)
+                 "where hour between %d and %d group by month, date having ((max(high) - sum(Open)) * 10000 > %d and (min(low) -  sum(Open)) * 10000 > %d and sum(Open) > 1) " \
+                 "or ((max(high) - sum(Open)) * 10000 < %d and (min(low) -  sum(Open)) * 10000 < %d and sum(Open) > 0)" % (start_time, start_time, end_time, limit, 0 - stop, stop, 0 - limit)
         self.cursor.execute(sqlcmd)
         result = self.cursor.fetchall()
         return  len(result)
 
-    def get_double_lose_count_among_year(self, start_time, end_time):
+    def get_double_lose_count_among_year(self, start_time, end_time, limit, stop):
         sqlcmd = "select month, date,  sum(Open) as Open, (max(high) - sum(Open)) * 10000 as high, (min(low) -  sum(Open)) * 10000 as low, " \
                  "(max(high) - min(low)) * 10000 as range from ( select month, date, hour, case hour when %d then Open else 0 end as open, high, low, range from Hourly_Table ) T " \
-                 "where hour between %d and %d group by month, date having ((max(high) - sum(Open)) * 10000 < 35 and (max(high) - sum(Open)) * 10000 > 25  and (min(low) -  sum(Open)) * 10000 > -25 and sum(Open) > 1) " \
-                 "or ((max(high) - sum(Open)) * 10000 < 25 and (min(low) -  sum(Open)) * 10000 > -35 and (min(low) -  sum(Open)) * 10000 < -25 and sum(Open) > 1)" % (start_time, start_time, end_time)
+                 "where hour between %d and %d group by month, date having ((max(high) - sum(Open)) * 10000 < %d and (max(high) - sum(Open)) * 10000 > %d  and (min(low) -  sum(Open)) * 10000 > %d and sum(Open) > 1) " \
+                 "or ((max(high) - sum(Open)) * 10000 < %d and (min(low) -  sum(Open)) * 10000 > %d and (min(low) -  sum(Open)) * 10000 < %d and sum(Open) > 1) " % (start_time, start_time, end_time, limit, stop, 0-stop, stop, 0-limit, 0-stop)
+        sqlcmd = "select  \
+                            month, date, sum(Open) as Open,  \
+                            (max(high) - sum(Open)) * 10000 as high,  \
+                            (min(low) -  sum(Open)) * 10000 as low, \
+                            (max(high) - min(low)) * 10000 as range  \
+                        from  \
+                            (  \
+                                select  \
+                                    month, date, hour,  \
+                                    case hour when %d then Open else 0 end as open,  \
+                                    high, low, range  \
+                                from Hourly_Table ) T  \
+                        where  \
+                            hour between %d and %d  \
+                        group by  \
+                            month, date  \
+                        having  \
+                            ( \
+                                (max(high) - sum(Open)) * 10000 < %d and  \
+                                (max(high) - sum(Open)) * 10000 > %d and  \
+                                (min(low) -  sum(Open)) * 10000 < %d and  \
+                                sum(Open) > 1 \
+                            )  \
+                            or  \
+                            ( \
+                                (max(high) - sum(Open)) * 10000 > %d and  \
+                                (min(low) -  sum(Open)) * 10000 < %d and  \
+                                (min(low) -  sum(Open)) * 10000 > %d and  \
+                                sum(Open) > 1 \
+                            ) \
+                            or \
+                            ( \
+                                (max(high) - sum(Open)) * 10000 < %d and  \
+                                (max(high) - sum(Open)) * 10000 > %d and  \
+                                (min(low) -  sum(Open)) * 10000 < %d and  \
+                                (min(low) -  sum(Open)) * 10000 > %d and  \
+                                sum(Open) > 1 \
+                            )" % (start_time, start_time, end_time, limit, stop, 0 - limit,
+                                  limit, 0 - stop, 0- limit, limit, stop, 0 - stop, 0- limit)
         self.cursor.execute(sqlcmd)
         result = self.cursor.fetchall()
         return  len(result)
 
     def get_overall_profit_count(self):
+        stop = 28
         for start_time in range(0, 24):
             for end_time in range(start_time, 24):
-                win_count = self.get_profit_count_among_year(start_time, end_time)
-                double_lose_count = self.get_double_lose_count_among_year(start_time, end_time)
-                print "%d,%d,%d,%d" % (start_time, end_time, win_count, double_lose_count)
+                for profit in range(28, 40):
+                    win_count = self.get_profit_count_among_year(start_time, end_time, stop + profit, stop)
+                    double_lose_count = self.get_double_lose_count_among_year(start_time, end_time, stop + profit, stop)
+                    self.result.append((start_time, end_time, win_count, double_lose_count, win_count * (profit) - double_lose_count * 2 * stop, stop, profit),)
+        self.result.sort(key = lambda x: x[4], reverse=True)
+        for x in range(0, 10):
+            print self.result[x]
 
     def select_all_dates(self):
         sqlcmd = "select distinct Date from M1_Data"
